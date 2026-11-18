@@ -1,0 +1,54 @@
+:root {
+  --primary: #0B5D4B; --primary-dark: #08463A; --primary-soft: #E6F1ED;
+  --gold: #E3B341; --gold-soft: #FBF1D9; --gold-text: #7A5300;
+  --ink: #1C1917; --muted: #57534E; --border: #E7E5E4; --bg: #FAFAF9; --warn: #9A3412; --warn-soft: #FDECEC;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Ethiopic", "Nyala", sans-serif;
+  background: var(--bg); color: var(--ink); font-size: 16px; line-height: 1.55; }
+a { color: var(--primary); }
+header.top { background: var(--primary); color: #fff; }
+header.top .in { max-width: 760px; margin: 0 auto; padding: 14px 18px; display: flex; align-items: center; gap: 12px; }
+header.top img { width: 40px; height: 40px; border-radius: 10px; background: #fff; }
+header.top .brand { font-weight: 800; font-size: 20px; flex: 1; }
+header.top .brand small { display: block; font-weight: 500; font-size: 13px; opacity: .85; }
+header.top a.home { color: #fff; text-decoration: none; display: flex; align-items: center; gap: 12px; flex: 1; }
+.lang { display: flex; border: 1px solid rgba(255,255,255,.5); border-radius: 999px; overflow: hidden; }
+.lang button { background: transparent; color: #fff; border: 0; padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer; }
+.lang button.on { background: #fff; color: var(--primary); font-weight: 700; }
+main { max-width: 760px; margin: 0 auto; padding: 20px 18px 48px; }
+h1 { font-size: 26px; line-height: 1.25; margin: 6px 0 10px; }
+h2 { font-size: 19px; margin: 28px 0 8px; }
+.muted { color: var(--muted); }
+.small { font-size: 14px; }
+.card { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 14px 0; }
+.card.ok { background: var(--primary-soft); border-color: var(--primary); }
+.card.warn { background: var(--warn-soft); border-color: #E7A99A; }
+.card.gold { background: var(--gold-soft); border-color: var(--gold); }
+label { display: block; font-weight: 700; font-size: 14px; margin: 14px 0 6px; }
+input[type=email], input[type=password], input[type=text] { width: 100%; height: 48px; border: 1px solid #D6D3D1; border-radius: 12px; padding: 0 14px; font: inherit; background: #fff; }
+input:focus { outline: 3px solid var(--primary-soft); border-color: var(--primary); }
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 20px; border-radius: 12px; border: 0;
+  background: var(--primary); color: #fff; font: inherit; font-weight: 700; cursor: pointer; text-decoration: none; }
+.btn.block { width: 100%; }
+.btn.outline { background: #fff; color: var(--primary); border: 1px solid var(--primary); }
+.btn:disabled { opacity: .55; cursor: default; }
+.choices { display: grid; gap: 10px; }
+.choice { display: flex; gap: 12px; align-items: center; border: 1px solid var(--border); border-radius: 14px; padding: 14px; cursor: pointer; background: #fff; }
+.choice input { width: 20px; height: 20px; accent-color: var(--primary); }
+.choice.on { border-color: var(--primary); background: var(--primary-soft); }
+.choice .t { font-weight: 700; flex: 1; }
+.choice .p { font-weight: 800; }
+.acct { background: #F7F7F5; border-radius: 12px; padding: 12px 14px; margin-top: 10px; }
+.acct .num { font-size: 22px; font-weight: 800; letter-spacing: .5px; }
+.err { color: var(--warn); font-weight: 600; margin: 10px 0; }
+.badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+.row { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
+.links { display: grid; gap: 10px; margin-top: 18px; }
+.links a { display: block; background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 16px; text-decoration: none; color: var(--ink); }
+.links a b { color: var(--primary); }
+footer { max-width: 760px; margin: 0 auto; padding: 0 18px 36px; color: var(--muted); font-size: 14px; }
+.legal h2 { border-top: 1px solid var(--border); padding-top: 18px; }
+.legal li { margin: 6px 0; }
+[hidden] { display: none !important; }

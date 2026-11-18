@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Serg – Vendor subscription</title>
+<link rel="icon" href="favicon.png">
+<link rel="stylesheet" href="style.css">
+<meta name="robots" content="noindex">
+</head>
+<body>
+<header class="top"><div class="in">
+  <a class="home" href="./"><img src="logo.png" alt=""><span class="brand">Serg <small data-t="Vendor subscription">Vendor subscription</small></span></a>
+  <div class="lang" role="group" aria-label="Language"><button type="button" data-lang="en">EN</button><button type="button" data-lang="am">አማ</button></div>
+</div></header>
+
+<main>
+  <!-- signed out -->
+  <section id="signin" hidden>
+    <h1 data-t="Pay your Serg subscription">Pay your Serg subscription</h1>
+    <p class="muted" data-t="Sign in with the email and password of your Serg vendor account.">Sign in with the email and password of your Serg vendor account.</p>
+    <form id="signinForm" class="card" novalidate>
+      <label for="email" data-t="Email">Email</label>
+      <input id="email" type="email" autocomplete="username" required>
+      <label for="password" data-t="Password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" required>
+      <p id="signinErr" class="err" hidden></p>
+      <p style="margin-top:16px"><button class="btn block" id="signinBtn" type="submit" data-t="Sign in">Sign in</button></p>
+      <p class="small muted" data-t="Forgot your password? Reset it in the Serg app (Sign in → Forgot password).">Forgot your password? Reset it in the Serg app (Sign in → Forgot password).</p>
+    </form>
+  </section>
+
+  <!-- signed in -->
+  <section id="portal" hidden>
+    <p class="small muted"><span data-t="Signed in as">Signed in as</span> <b id="who"></b> · <a href="#" id="signout" data-t="Sign out">Sign out</a></p>
+    <div id="notVendor" class="card warn" hidden><b data-t="This account is not a vendor account.">This account is not a vendor account.</b>
+      <p class="small" data-t="Create your listing in the Serg app first, then come back here.">Create your listing in the Serg app first, then come back here.</p></div>
+
+    <div id="vendorBox" hidden>
+      <h1 id="vname"></h1>
+      <div id="status" class="card"></div>
+
+      <h2 data-t="1. Choose a plan">1. Choose a plan</h2>
+      <p class="small muted" id="servicesNote"></p>
+      <div id="plans" class="choices"></div>
+
+      <h2 data-t="2. Send the money">2. Send the money</h2>
+      <div class="choices" id="methods">
+        <label class="choice"><input type="radio" name="method" value="telebirr" checked><span class="t">telebirr</span></label>
+        <label class="choice"><input type="radio" name="method" value="cbe"><span class="t" data-t="Commercial Bank of Ethiopia (CBE)">Commercial Bank of Ethiopia (CBE)</span></label>
+      </div>
+      <div class="acct" id="acct"></div>
+
+      <h2 data-t="3. Send us the receipt">3. Send us the receipt</h2>
+      <form id="payForm" class="card" novalidate>
+        <label for="ref" data-t="Transaction number (from the receipt)">Transaction number (from the receipt)</label>
+        <input id="ref" type="text" autocomplete="off" required>
+        <label for="payer" data-t="Paid by (name on the receipt, optional)">Paid by (name on the receipt, optional)</label>
+        <input id="payer" type="text" autocomplete="off">
+        <label for="file" data-t="Receipt (screenshot or PDF, up to 15 MB)">Receipt (screenshot or PDF, up to 15 MB)</label>
+        <input id="file" type="file" accept="image/*,application/pdf" required>
+        <p id="payErr" class="err" hidden></p>
+        <p style="margin-top:16px"><button class="btn block" id="payBtn" type="submit" data-t="Send receipt">Send receipt</button></p>
+        <p class="small muted" data-t="The Serg team checks receipts, usually within one working day. Your listing goes live as soon as it is approved, and you get a notification in the app.">The Serg team checks receipts, usually within one working day. Your listing goes live as soon as it is approved, and you get a notification in the app.</p>
+      </form>
+
+      <h2 data-t="Your payments">Your payments</h2>
+      <div id="history"></div>
+    </div>
+  </section>
+
+  <p id="loading" class="muted" data-t="Loading…">Loading…</p>
+</main>
+<footer><a href="privacy.html" data-t="Privacy policy and terms">Privacy policy and terms</a> · <a href="delete-account.html" data-t="Delete your account">Delete your account</a> · serg.weddings.app@gmail.com</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="i18n.js"></script>
+<script>
+const SUPABASE_URL = 'https://hhimrbavhuvrwmvewyst.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhoaW1yYmF2aHV2cndtdmV3eXN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ0MjQyNjcsImV4cCI6MjExMDAwMDI2N30.stUAiIH3krlMxK2scfd_efMG4Gj57NBwQVNNdqPry5s';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $ = (id) => document.getElementById(id);
+const MAX_BYTES = 15 * 1024 * 1024;
+const CAT = { venue: 'Venues', photo: 'Photo & video', decor: 'Decor', catering: 'Catering', attire: 'Attire', makeup: 'Makeup', cars: 'Cars', music: 'Music', planner: 'Event planner', other: 'Others' };
+let state = { vendor: null, plans: [], settings: {}, planId: null };
+
+const birr = (n) => Math.round(n).toLocaleString('en-US') + (SergI18n.lang() === 'am' ? ' ብር' : ' Br');
+const fmtDate = (iso) => iso ? new Date(iso.slice(0, 10) + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '–';
+const T = (s, v) => SergI18n.t(s, v);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function priceOf(p) {
+  const extra = (state.vendor.extra_categories || []).length;
+  return Math.round(p.price * (1 + ((state.settings.extra_category_percent || 0) / 100) * extra));
+}
+function daysLeft(paidUntil) {
+  if (!paidUntil) return null;
+  const end = new Date(String(paidUntil).slice(0, 10) + 'T00:00:00');
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  return Math.round((end - now) / 86400000);
+}
+
+async function show() {
+  $('loading').hidden = true;
+  const { data: { session } } = await db.auth.getSession();
+  $('signin').hidden = !!session;
+  $('portal').hidden = !session;
+  if (!session) return;
+  $('who').textContent = session.user.email;
+  $('loading').hidden = false;
+  const [{ data: vendor }, { data: plans }, { data: settings }] = await Promise.all([
+    db.from('vendors').select('id, name, category, extra_categories, paid_until').eq('owner_id', session.user.id).maybeSingle(),
+    db.from('subscription_plans').select('id, name, name_am, months, price, active, sort').eq('active', true).order('sort'),
+    db.from('app_settings').select('*').eq('id', 1).maybeSingle(),
+  ]);
+  $('loading').hidden = true;
+  $('notVendor').hidden = !!vendor;
+  $('vendorBox').hidden = !vendor;
+  if (!vendor) return;
+  state = { vendor, plans: plans || [], settings: settings || {}, planId: state.planId };
+  render();
+  loadHistory();
+}
+
+function render() {
+  const v = state.vendor, s = state.settings;
+  $('vname').textContent = v.name;
+  const left = daysLeft(v.paid_until);
+  const box = $('status');
+  if (left !== null && left >= 0) {
+    box.className = 'card ' + (left >= 8 ? 'ok' : 'gold');
+    box.innerHTML = '<b>' + esc(T('Your listing is live')) + '</b><div class="small">' + esc(T('Paid until {date}.', { date: fmtDate(v.paid_until) })) + ' ' + esc(T('Paying now adds the new period after this date.')) + '</div>';
+  } else {
+    box.className = 'card warn';
+    box.innerHTML = '<b>' + esc(v.paid_until ? T('Your subscription ended on {date}.', { date: fmtDate(v.paid_until) }) : T('Your listing is not visible to customers yet.')) + '</b><div class="small">' + esc(T('Pay below to show your listing to customers and receive requests.')) + '</div>';
+  }
+  const services = [v.category, ...(v.extra_categories || [])].map((c) => T(CAT[c] || c));
+  $('servicesNote').textContent = (v.extra_categories || []).length
+    ? T('Prices include your {n} services ({list}). Each extra service adds {p}% to the plan.', { n: services.length, list: services.join(', '), p: s.extra_category_percent || 0 })
+    : T('Your service: {list}.', { list: services.join(', ') });
+  const monthly = state.plans.find((p) => p.months === 1);
+  if (!state.planId && state.plans[0]) state.planId = state.plans[0].id;
+  $('plans').innerHTML = state.plans.map((p) => {
+    const save = monthly && p.months > 1 ? priceOf(monthly) * p.months - priceOf(p) : 0;
+    const name = SergI18n.lang() === 'am' && p.name_am ? p.name_am : T(p.name);
+    return '<label class="choice' + (p.id === state.planId ? ' on' : '') + '"><input type="radio" name="plan" value="' + p.id + '"' + (p.id === state.planId ? ' checked' : '') + '>' +
+      '<span class="t">' + esc(name) + (save > 0 ? '<div class="small muted">' + esc(T('You save {amount}', { amount: birr(save) })) + '</div>' : '') + '</span><span class="p">' + birr(priceOf(p)) + '</span></label>';
+  }).join('');
+  renderAccount();
+}
+
+function renderAccount() {
+  const s = state.settings;
+  const plan = state.plans.find((p) => p.id === state.planId);
+  const method = document.querySelector('input[name=method]:checked').value;
+  document.querySelectorAll('#methods .choice').forEach((c) => c.classList.toggle('on', c.querySelector('input').checked));
+  const amount = plan ? birr(priceOf(plan)) : '';
+  $('acct').innerHTML = method === 'telebirr'
+    ? '<div class="small muted">' + esc(T('Send {amount} with telebirr to:', { amount })) + '</div><div class="num">' + esc(s.telebirr_number || '–') + '</div><div>' + esc(s.telebirr_name || '') + '</div>'
+    : '<div class="small muted">' + esc(T('Transfer {amount} to this CBE account:', { amount })) + '</div><div class="num">' + esc(s.cbe_account_number || '–') + '</div><div>' + esc(s.cbe_account_name || '') + '</div>';
+}
+
+const STATUS = { pending: ['Being checked', '#7A5300', '#FBF1D9'], approved: ['Approved', '#0B5D4B', '#E6F1ED'], rejected: ['Not accepted', '#9A3412', '#FDECEC'] };
+async function loadHistory() {
+  const { data } = await db.from('subscription_payments').select('*').eq('vendor_id', state.vendor.id).order('created_at', { ascending: false }).limit(20);
+  const list = data || [];
+  $('history').innerHTML = list.length ? list.map((p) => {
+    const st = STATUS[p.status] || STATUS.pending;
+    return '<div class="card"><div class="row"><b>' + esc(T(p.plan_name)) + ' · ' + birr(p.amount) + '</b><span class="badge" style="color:' + st[1] + ';background:' + st[2] + '">' + esc(T(st[0])) + '</span></div>' +
+      '<div class="small muted">' + esc(p.method === 'cbe' ? 'CBE' : p.method) + (p.reference ? ' · ' + esc(p.reference) : '') + ' · ' + fmtDate(p.created_at) + '</div>' +
+      (p.status === 'approved' && p.period_end ? '<div class="small muted">' + esc(T('Covers {from} – {to}', { from: fmtDate(p.period_start), to: fmtDate(p.period_end) })) + '</div>' : '') +
+      (p.status === 'rejected' && p.note ? '<div class="small" style="color:#9A3412">' + esc(p.note) + '</div>' : '') + '</div>';
+  }).join('') : '<p class="muted">' + esc(T('No payments yet.')) + '</p>';
+}
+
+$('plans').addEventListener('change', (e) => { if (e.target.name === 'plan') { state.planId = e.target.value; render(); } });
+$('methods').addEventListener('change', renderAccount);
+
+$('signinForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('signinErr').hidden = true;
+  $('signinBtn').disabled = true;
+  const { error } = await db.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value });
+  $('signinBtn').disabled = false;
+  if (error) { $('signinErr').textContent = T('Wrong email or password.'); $('signinErr').hidden = false; return; }
+  $('password').value = '';
+  show();
+});
+$('signout').addEventListener('click', async (e) => { e.preventDefault(); await db.auth.signOut(); state = { vendor: null, plans: [], settings: {}, planId: null }; show(); });
+
+$('payForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = (m) => { $('payErr').textContent = m; $('payErr').hidden = false; };
+  $('payErr').hidden = true;
+  const plan = state.plans.find((p) => p.id === state.planId);
+  const method = document.querySelector('input[name=method]:checked').value;
+  const ref = $('ref').value.trim();
+  const file = $('file').files[0];
+  if (!plan) return err(T('Choose a plan.'));
+  if (ref.length < 4) return err(T('Enter the transaction number from the receipt.'));
+  if (!file) return err(T('Attach the receipt (screenshot or PDF).'));
+  if (file.size > MAX_BYTES) return err(T('The receipt can be up to 15 MB. A screenshot or the PDF from the bank is fine.'));
+  if (!/^image\/|^application\/pdf$/.test(file.type)) return err(T('The receipt must be a photo or a PDF.'));
+  $('payBtn').disabled = true;
+  $('payBtn').textContent = T('Sending…');
+  try {
+    const ext = file.type === 'application/pdf' ? 'pdf' : (file.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+    const path = state.vendor.id + '/receipt-' + Date.now() + '.' + ext;
+    const up = await db.storage.from('subscription-receipts').upload(path, file, { contentType: file.type, upsert: false });
+    if (up.error) throw up.error;
+    const { error } = await db.rpc('submit_subscription_payment', { p_plan: plan.id, p_method: method, p_reference: ref, p_payer_name: $('payer').value.trim(), p_receipt_path: path });
+    if (error) throw error;
+    $('ref').value = ''; $('payer').value = ''; $('file').value = '';
+    alert(T('Receipt sent. The Serg team will check it, usually within one working day.'));
+    loadHistory();
+  } catch (x) {
+    err(T(x.message || 'Something went wrong'));
+  } finally {
+    $('payBtn').disabled = false;
+    $('payBtn').textContent = T('Send receipt');
+  }
+});
+
+SergI18n.init(() => { if (state.vendor) { render(); loadHistory(); } });
+show();
+</script>
+</body>
+</html>
